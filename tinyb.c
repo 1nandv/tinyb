@@ -7,11 +7,6 @@ static const char help[] =
     "Usage: tbc infile(s)...\n"
     ;
 
-//
-// fixme: invalid implementation of getch
-// fixme: do optimizations + verify edge cases
-//
-
 // +-<>.,[]
 #define OP_CELL_INC     0
 #define OP_CELL_DEC     1
@@ -125,34 +120,56 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
 
 int interpret(struct program *p, unsigned char *ins)
 {
-    size_t mc_cursor = 0,
-           mc_len    = 0;
-    char *mc         = NULL;
+    size_t  inp_cursor = 0,
+            inp_len    = 0;
+    char *inp          = NULL;
 
-    int i = 0;
-    while(ins[i++] != OP_EOF) {
-        switch(ins[i]) {
+    size_t i = 0;
+    while(ins[i] != OP_EOF) {
+        switch(ins[i++]) {
             case OP_CELL_INC:
-                p->pc[p->pc_cursor]++;
+                if(p->pc[p->pc_cursor] >= 0xff)
+                    p->pc[p->pc_cursor] = 0x00;
+                else
+                    p->pc[p->pc_cursor]++;
                 break;
 
             case OP_CELL_DEC:
-                p->pc[p->pc_cursor]--;
+                if(p->pc[p->pc_cursor] <= 0x00)
+                    p->pc[p->pc_cursor] = 0xff;
+                else
+                    p->pc[p->pc_cursor]--;
                 break;
 
             case OP_PTR_LEFT:
-                if(p->pc_cursor != 0)
+                if(p->pc_cursor == 0) {
+                    fprintf(stderr, "Oops: memory underflowed\n");
+                    return 1;
+                } else {
                     p->pc_cursor--;
+                }
+
                 break;
 
             case OP_PTR_RIGHT:
-                if(p->pc_cursor != PC_LENGTH)
+                if(p->pc_cursor >= PC_LENGTH) {
+                    fprintf(stderr, "Oops: memory overflowed\n");
+                    return 1;
+                } else {
                     p->pc_cursor++;
+                }
+
                 break;
 
             case OP_GETCH:
-                getline(&mc, &mc_len, stdin);
-                mc_cursor = 0;
+                if(inp == NULL)
+                    getline(&inp, &inp_len, stdin);
+
+                // do nothing if we have already read the whole
+                // input string
+                if(inp_cursor < strlen(inp))
+                    p->pc[p->pc_cursor] = inp[inp_cursor++];
+
                 break;
 
             case OP_PUTCH:
@@ -162,7 +179,7 @@ int interpret(struct program *p, unsigned char *ins)
             case OP_JMP_FWD:
                 if(p->stack_cursor > STACK_LENGTH - 1)
                     continue;
-
+                
                 if(p->pc[p->pc_cursor] == 0) {
                     int depth = 1;
 
@@ -192,7 +209,7 @@ int interpret(struct program *p, unsigned char *ins)
         }
     }
 
-    free(mc);
+    free(inp);
 
     return 0;
 }
