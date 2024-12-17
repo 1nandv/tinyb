@@ -21,6 +21,9 @@ static const char help[] =
 #define PC_LENGTH     30000
 #define STACK_LENGTH  30000
 
+#define ERROR(message) \
+    fprintf(stderr, "\033[1;31mERROR:\033[0m %s\n", message);
+
 struct program {
     unsigned char pc[PC_LENGTH];
     unsigned char stack[STACK_LENGTH];
@@ -61,8 +64,8 @@ int main(int argc, char **argv)
 unsigned char *parse_ins(struct program *p, FILE *fp)
 {
     unsigned int  ins_cursor = 0,
-                  ins_len    = 8,
-                  sp         = 0;
+                  ins_len    = 8;
+    int           sp         = 0;
     unsigned char *ins = malloc(ins_len);
     char ch;
 
@@ -105,8 +108,11 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
         }
     }
 
-    if(sp != 0) {
-        fprintf(stderr, "Oops: unmatched '[' found\n");
+    if(sp > 0) {
+        ERROR("unmatched '[' found during parsing");
+        exit(1);
+    } else if(sp < 0) {
+        ERROR("unmatched ']' found during parsing");
         exit(1);
     }
 
@@ -143,7 +149,7 @@ int interpret(struct program *p, unsigned char *ins)
 
             case OP_PTR_LEFT:
                 if(p->pc_cursor == 0) {
-                    fprintf(stderr, "Oops: memory underflowed\n");
+                    ERROR("attempted to move the tape pointer out of lower bounds");
                     return 1;
                 } else {
                     p->pc_cursor--;
@@ -153,7 +159,7 @@ int interpret(struct program *p, unsigned char *ins)
 
             case OP_PTR_RIGHT:
                 if(p->pc_cursor >= PC_LENGTH) {
-                    fprintf(stderr, "Oops: memory overflowed\n");
+                    ERROR("attempted to move the tape pointer out of upper bounds");
                     return 1;
                 } else {
                     p->pc_cursor++;
