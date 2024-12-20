@@ -16,13 +16,13 @@
 #define PC_LENGTH     30000
 #define STACK_LENGTH  30000
 
-#define ERROR(msg, ...)         \
+#define ERROR(fmt, ...)         \
     do {                        \
         fprintf(stderr,         \
         "\x1b[1;30;41m"         \
         " ERROR "               \
         "\x1b[0;31m"            \
-        " " msg                 \
+        " " fmt                 \
         "\x1b[0m\n",            \
         ##__VA_ARGS__);         \
     } while(0);
@@ -122,10 +122,10 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
     }
 
     if(sp > 0) {
-        ERROR("unmatched '[' found during parsing\n");
+        ERROR("unmatched '[' found during parsing");
         exit(1);
     } else if(sp < 0) {
-        ERROR("unmatched ']' found during parsing\n");
+        ERROR("unmatched ']' found during parsing");
         exit(1);
     }
 
@@ -162,7 +162,7 @@ int interpret(struct program *p, unsigned char *ins)
 
             case OP_PTR_LEFT:
                 if(p->pc_cursor == 0) {
-                    ERROR("attempted to move the tape pointer out of lower bounds\n");
+                    ERROR("attempted to move the tape pointer out of lower bounds");
                     return 1;
                 } else {
                     p->pc_cursor--;
@@ -172,7 +172,7 @@ int interpret(struct program *p, unsigned char *ins)
 
             case OP_PTR_RIGHT:
                 if(p->pc_cursor >= PC_LENGTH) {
-                    ERROR("attempted to move the tape pointer out of upper bounds\n");
+                    ERROR("attempted to move the tape pointer out of upper bounds");
                     return 1;
                 } else {
                     p->pc_cursor++;
