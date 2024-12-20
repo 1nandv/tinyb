@@ -2,11 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char help[] =
-    "Tiny Brainfuck Interpreter\n"
-    "Usage: tbc infile(s)...\n"
-    ;
-
 // +-<>.,[]
 #define OP_CELL_INC     0
 #define OP_CELL_DEC     1
@@ -21,8 +16,16 @@ static const char help[] =
 #define PC_LENGTH     30000
 #define STACK_LENGTH  30000
 
-#define ERROR(message) \
-    fprintf(stderr, "\033[1;31mERROR:\033[0m %s\n", message);
+#define ERROR(msg, ...)         \
+    do {                        \
+        fprintf(stderr,         \
+        "\x1b[1;30;41m"         \
+        " ERROR "               \
+        "\x1b[0;31m"            \
+        " " msg                 \
+        "\x1b[0m\n",            \
+        ##__VA_ARGS__);         \
+    } while(0);
 
 struct program {
     unsigned char pc[PC_LENGTH];
@@ -35,8 +38,18 @@ struct program {
 unsigned char *parse_ins(struct program *p, FILE *fp);
 int interpret(struct program *p, unsigned char *ins);
 
+static const char help[] =
+    "Tiny Brainfuck Interpreter\n"
+    "Usage: tbc infile(s)...\n"
+    ;
+
 int main(int argc, char **argv)
 {
+    if(argc != 2) {
+        fputs(help, stderr);
+        return 1;
+    }
+
     struct program *p = malloc(sizeof(struct program));
     memset(p->pc,    0, PC_LENGTH);
     memset(p->stack, 0, STACK_LENGTH);
@@ -46,8 +59,8 @@ int main(int argc, char **argv)
 
     FILE *fp;
 
-    if(argc != 2 || (fp = fopen(argv[1], "r")) == NULL) {
-        fputs(help, stderr);
+    if((fp = fopen(argv[1], "r")) == NULL) {
+        ERROR("unable to open file '%s'", argv[1]);
         return 1;
     }
     
@@ -109,10 +122,10 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
     }
 
     if(sp > 0) {
-        ERROR("unmatched '[' found during parsing");
+        ERROR("unmatched '[' found during parsing\n");
         exit(1);
     } else if(sp < 0) {
-        ERROR("unmatched ']' found during parsing");
+        ERROR("unmatched ']' found during parsing\n");
         exit(1);
     }
 
@@ -128,7 +141,7 @@ int interpret(struct program *p, unsigned char *ins)
 {
     size_t  inp_cursor = 0,
             inp_len    = 0;
-    char *inp          = NULL;
+    char    *inp       = NULL;
 
     size_t i = 0;
     while(ins[i] != OP_EOF) {
@@ -149,7 +162,7 @@ int interpret(struct program *p, unsigned char *ins)
 
             case OP_PTR_LEFT:
                 if(p->pc_cursor == 0) {
-                    ERROR("attempted to move the tape pointer out of lower bounds");
+                    ERROR("attempted to move the tape pointer out of lower bounds\n");
                     return 1;
                 } else {
                     p->pc_cursor--;
@@ -159,7 +172,7 @@ int interpret(struct program *p, unsigned char *ins)
 
             case OP_PTR_RIGHT:
                 if(p->pc_cursor >= PC_LENGTH) {
-                    ERROR("attempted to move the tape pointer out of upper bounds");
+                    ERROR("attempted to move the tape pointer out of upper bounds\n");
                     return 1;
                 } else {
                     p->pc_cursor++;
