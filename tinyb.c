@@ -14,7 +14,7 @@
 #define OP_EOF          8
 
 #define PC_LENGTH     30000
-#define STACK_LENGTH  30000
+#define STACK_LENGTH  1024
 
 #define ERROR(fmt, ...)         \
     do {                        \
