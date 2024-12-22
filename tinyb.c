@@ -41,7 +41,7 @@ int interpret(struct program *p, unsigned char *ins);
 
 static const char help[] =
     "Tiny Brainfuck Interpreter\n"
-    "Usage: tbc infile(s)...\n"
+    "Usage: tinyb infile(s)...\n"
     ;
 
 int main(int argc, char **argv)
@@ -49,6 +49,11 @@ int main(int argc, char **argv)
     if(argc != 2) {
         fputs(help, stderr);
         return 1;
+    }
+
+    if(!(strcmp(argv[1], "--help")) || !(strcmp(argv[1], "-h"))) {
+        fputs(help, stdout);
+        return 0;
     }
 
     struct program *p = malloc(sizeof(struct program));
