@@ -51,8 +51,8 @@ int main(int argc, char **argv)
     }
 
     struct program *p = malloc(sizeof(struct program));
-    memset(p->pc,    0, PC_LENGTH);
-    memset(p->stack, 0, STACK_LENGTH);
+    memset(p->pc,         0, PC_LENGTH * sizeof(unsigned char));
+    memset(p->stack,      0, STACK_LENGTH * sizeof(unsigned char));
 
     p->pc_cursor    = 0;
     p->stack_cursor = 0;
