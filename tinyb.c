@@ -30,9 +30,10 @@
 struct program {
     unsigned char pc[PC_LENGTH];
     unsigned char stack[STACK_LENGTH];
+    ssize_t       jmp_table[PC_LENGTH];
 
-    unsigned int  pc_cursor;
-    unsigned int  stack_cursor;
+    ssize_t pc_cursor;
+    ssize_t stack_cursor;
 };
 
 unsigned char *parse_ins(struct program *p, FILE *fp);
@@ -52,6 +53,7 @@ int main(int argc, char **argv)
 
     struct program *p = malloc(sizeof(struct program));
     memset(p->pc,         0, PC_LENGTH * sizeof(unsigned char));
+    memset(p->jmp_table, -1, PC_LENGTH * sizeof(ssize_t));
     memset(p->stack,      0, STACK_LENGTH * sizeof(unsigned char));
 
     p->pc_cursor    = 0;
@@ -78,8 +80,7 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
 {
     unsigned int  ins_cursor = 0,
                   ins_len    = 8;
-    int           sp         = 0;
-    unsigned char *ins = malloc(ins_len);
+    unsigned char *ins       = malloc(ins_len);
     char ch;
 
     while((ch = getc(fp)) != EOF) {
@@ -109,11 +110,12 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
                 break;
             case '[':
                 ins[ins_cursor++] = OP_JMP_FWD;
-                sp++;
+                p->stack[p->stack_cursor++] = ins_cursor;
                 break;
             case ']':
                 ins[ins_cursor++] = OP_JMP_BCK;
-                sp--;
+                p->jmp_table[ins_cursor] = p->stack[--p->stack_cursor];
+                p->jmp_table[p->jmp_table[ins_cursor]] = ins_cursor;
                 break;
             default:
                 // ignore
@@ -121,10 +123,10 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
         }
     }
 
-    if(sp > 0) {
+    if(p->stack_cursor > 0) {
         ERROR("unmatched '[' found during parsing");
         exit(1);
-    } else if(sp < 0) {
+    } else if(p->stack_cursor < 0) {
         ERROR("unmatched ']' found during parsing");
         exit(1);
     }
@@ -140,6 +142,7 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
 int interpret(struct program *p, unsigned char *ins)
 {
     size_t i = 0;
+
     while(ins[i] != OP_EOF) {
         switch(ins[i++]) {
             case OP_CELL_INC:
@@ -163,7 +166,6 @@ int interpret(struct program *p, unsigned char *ins)
                 } else {
                     p->pc_cursor--;
                 }
-
                 break;
 
             case OP_PTR_RIGHT:
@@ -173,7 +175,6 @@ int interpret(struct program *p, unsigned char *ins)
                 } else {
                     p->pc_cursor++;
                 }
-
                 break;
 
             case OP_GETCH:
@@ -185,39 +186,19 @@ int interpret(struct program *p, unsigned char *ins)
                 break;
 
             case OP_JMP_FWD:
-                if(p->stack_cursor > STACK_LENGTH - 1)
-                    continue;
-                
-                if(p->pc[p->pc_cursor] == 0) {
-                    int depth = 1;
-
-                    while(depth > 0 && ins[++i] != OP_EOF) {
-                        if(ins[i] == OP_JMP_FWD) depth++;
-                        else if(ins[i] == OP_JMP_BCK) depth--;
-                    }
-                } else {
-                    p->stack[p->stack_cursor++] = i;
-                }
-
+                if(p->pc[p->pc_cursor] == 0)
+                    i = p->jmp_table[i];
                 break;
-            
+
             case OP_JMP_BCK:
-                if(p->stack_cursor <= 0)
-                    continue;
-
                 if(p->pc[p->pc_cursor] != 0)
-                    i = p->stack[p->stack_cursor - 1];
-                else
-                    p->stack_cursor--;
-
+                    i = p->jmp_table[i];
                 break;
 
             default:
                 continue;
         }
     }
-
-    free(inp);
 
     return 0;
 }
