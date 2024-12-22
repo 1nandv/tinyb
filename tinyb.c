@@ -19,12 +19,12 @@
 #define ERROR(fmt, ...)         \
     do {                        \
         fprintf(stderr,         \
-        "\x1b[1;30;41m"         \
-        " ERROR "               \
-        "\x1b[0;31m"            \
-        " " fmt                 \
-        "\x1b[0m\n",            \
-        ##__VA_ARGS__);         \
+                "\x1b[1;30;41m" \
+                " ERROR "       \
+                "\x1b[0;31m"    \
+                " " fmt         \
+                "\x1b[0m\n",    \
+                ##__VA_ARGS__); \
     } while(0);
 
 struct program {
@@ -139,10 +139,6 @@ unsigned char *parse_ins(struct program *p, FILE *fp)
 
 int interpret(struct program *p, unsigned char *ins)
 {
-    size_t  inp_cursor = 0,
-            inp_len    = 0;
-    char    *inp       = NULL;
-
     size_t i = 0;
     while(ins[i] != OP_EOF) {
         switch(ins[i++]) {
@@ -181,14 +177,7 @@ int interpret(struct program *p, unsigned char *ins)
                 break;
 
             case OP_GETCH:
-                if(inp == NULL)
-                    getline(&inp, &inp_len, stdin);
-
-                // do nothing if we have already read the whole
-                // input string
-                if(inp_cursor < strlen(inp))
-                    p->pc[p->pc_cursor] = inp[inp_cursor++];
-
+                p->pc[p->pc_cursor] = getc(stdin);
                 break;
 
             case OP_PUTCH:
